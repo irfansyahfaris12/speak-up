@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { getReporsByUnit } from "../lib/function/report";
 
-export function useRepots(unit,userId, fetchChapters = false) {
+export function useRepots(unit, userId, fetchChapters = false) {
   const { isLoading, data, error, refetch } = useQuery({
-    queryKey: ["report", unit],
+    queryKey: ["report", unit, userId],
     queryFn: async () => {
       const fetchReports = await getReporsByUnit(unit, userId);
       if (!fetchReports.success) {
@@ -11,11 +11,12 @@ export function useRepots(unit,userId, fetchChapters = false) {
       }
 
       let result = fetchReports.result;
-    //   if (fetchChapters) {
-    //     const res = await getCourseChapter(unit);
 
-    //     result.variants = res.data?.chapters || [];
-    //   }
+      // Optional: Fetch chapters if needed
+      // if (fetchChapters) {
+      //   const res = await getCourseChapter(unit);
+      //   result.variants = res.data?.chapters || [];
+      // }
 
       return result;
     },

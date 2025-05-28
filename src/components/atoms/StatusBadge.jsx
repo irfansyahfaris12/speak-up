@@ -4,9 +4,9 @@ function getColor(status) {
   switch (status.toLowerCase()) {
     case 'waiting':
       return 'bg-yellow-200 text-yellow-800';
-    case 'in progress':
+    case 'processing':
       return 'bg-blue-200 text-blue-800';
-    case 'closed':
+    case 'done':
       return 'bg-green-200 text-green-800';
     default:
       return 'bg-gray-200 text-gray-800';
