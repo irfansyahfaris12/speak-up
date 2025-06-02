@@ -8,7 +8,7 @@ import FullScreenLoader from '../components/organisms/FullScreenLoader';
 
 function HistoryPage() {
   const {uid} = useData();
-    const { loading, report } = useRepots('cimb', uid,  true);
+    const { loading, report } = useRepots('itc', uid,  true);
 
 
     if (loading) {

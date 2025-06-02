@@ -41,7 +41,7 @@ const ComplaintFormPage = () => {
     file_url: publicUrl,
   };
 
-  const unit = "cimb";
+  const unit = "itc";
 
   const result = await addReport(dataToSend, unit);
 
