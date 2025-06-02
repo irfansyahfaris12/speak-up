@@ -1,6 +1,5 @@
-import { use, useState } from "react";
+import { useState } from "react";
 import { addReport } from "../../lib/function/report";
-import { faker } from "@faker-js/faker";
 import { useData } from "../../providers/DataProviders";
 import { uploadFile } from "../../lib/function/uploadFile";
 
@@ -12,66 +11,105 @@ const ComplaintFormPage = () => {
     category: "",
     title: "",
     content: "",
+    file: null,
   });
+
+  // State untuk menyimpan pesan error tiap field
+  const [errors, setErrors] = useState({});
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+    setErrors({ ...errors, [e.target.name]: null }); // reset error saat user input
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setForm((prev) => ({ ...prev, file }));
+    setErrors({ ...errors, file: null });
+
+    if (file.type.startsWith("image/")) {
+      setImagePreview(URL.createObjectURL(file));
+    } else {
+      setImagePreview(null);
+    }
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+
+    if (!form.phone.match(/^08\d{8,}$/)) {
+      newErrors.phone = "Nomor telepon tidak valid. Gunakan format 08xxxxxxxxxx dengan minimal 10 digit.";
+    }
+    if (!form.title.trim()) {
+      newErrors.title = "Judul pengaduan harus diisi.";
+    }
+    if (!form.category) {
+      newErrors.category = "Kategori harus dipilih.";
+    }
+    if (!form.content.trim()) {
+      newErrors.content = "Isi pengaduan harus diisi.";
+    }
+    if (form.file) {
+      const allowedTypes = ["image/jpeg", "image/png", "application/pdf"];
+      if (!allowedTypes.includes(form.file.type)) {
+        newErrors.file = "File harus berupa JPG, PNG, atau PDF.";
+      }
+      const maxSizeInBytes = 2 * 1024 * 1024; // 2MB
+      if (form.file.size > maxSizeInBytes) {
+        newErrors.file = "Ukuran file tidak boleh lebih dari 2MB.";
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0; // true jika valid
   };
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  let publicUrl = null;
+    if (!validateForm()) return; // jika error, jangan lanjut
 
-  if (form.file) {
-    publicUrl = await uploadFile(form.file);
-    if (!publicUrl) {
-      alert("Gagal mengunggah lampiran.");
-      return;
+    let publicUrl = null;
+
+    if (form.file) {
+      publicUrl = await uploadFile(form.file);
+      if (!publicUrl) {
+        alert("Gagal mengunggah lampiran.");
+        return;
+      }
     }
-  }
 
-  const dataToSend = {
-    pengadu: nickname || "DefaultNickname",
-    phone: form.phone,
-    kategori: form.category,
-    title: form.title,
-    desc: form.content,
-    user: uid,
-    file_url: publicUrl,
+    const dataToSend = {
+      pengadu: nickname || "DefaultNickname",
+      phone: form.phone,
+      kategori: form.category,
+      title: form.title,
+      desc: form.content,
+      user: uid,
+      file_url: publicUrl,
+    };
+
+    const unit = "itc";
+
+    const result = await addReport(dataToSend, unit);
+
+    if (result.success) {
+      alert(`Pengaduan berhasil dikirim oleh: ${dataToSend.pengadu}`);
+      setForm({
+        phone: "",
+        category: "",
+        title: "",
+        content: "",
+        file: null,
+      });
+      setImagePreview(null);
+      setErrors({});
+    } else {
+      alert(`Gagal mengirim pengaduan: ${result.message}`);
+    }
   };
-
-  const unit = "itc";
-
-  const result = await addReport(dataToSend, unit);
-
-  if (result.success) {
-    alert(`Pengaduan berhasil dikirim oleh: ${dataToSend.pengadu}`);
-    setForm({
-      phone: "",
-      category: "",
-      title: "",
-      content: "",
-      file_url: null,
-    });
-    setImagePreview(null);
-  } else {
-    alert(`Gagal mengirim pengaduan: ${result.message}`);
-  }
-};
-
-  const handleFileChange = (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-
-  setForm((prev) => ({ ...prev, file }));
-
-  if (file.type.startsWith("image/")) {
-    setImagePreview(URL.createObjectURL(file));
-  } else {
-    setImagePreview(null);
-  }
-};
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -88,9 +126,14 @@ const ComplaintFormPage = () => {
               value={form.phone}
               onChange={handleChange}
               required
-              className="w-full px-4 py-3 rounded-xl border  focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white"
+              className={`w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 text-sm bg-white ${
+                errors.phone ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-blue-500"
+              }`}
               placeholder="08xxxxxxxxxx"
             />
+            {errors.phone && (
+              <p className="text-red-600 text-sm mt-1">{errors.phone}</p>
+            )}
           </div>
 
           {/* Title */}
@@ -104,9 +147,14 @@ const ComplaintFormPage = () => {
               value={form.title}
               onChange={handleChange}
               required
-              className="w-full px-4 py-3 rounded-xl border  focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white"
+              className={`w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 text-sm bg-white ${
+                errors.title ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-blue-500"
+              }`}
               placeholder="Misalnya: AC Rusak di Lantai 3"
             />
+            {errors.title && (
+              <p className="text-red-600 text-sm mt-1">{errors.title}</p>
+            )}
           </div>
 
           {/* Category */}
@@ -119,13 +167,18 @@ const ComplaintFormPage = () => {
               value={form.category}
               onChange={handleChange}
               required
-              className="w-full px-4 py-3 rounded-xl border  focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white"
+              className={`w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 text-sm bg-white ${
+                errors.category ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-blue-500"
+              }`}
             >
               <option value="">Pilih kategori</option>
               <option value="layanan">Layanan</option>
               <option value="fasilitas">Fasilitas</option>
               <option value="kebersihan">Kebersihan</option>
             </select>
+            {errors.category && (
+              <p className="text-red-600 text-sm mt-1">{errors.category}</p>
+            )}
           </div>
 
           {/* Content */}
@@ -139,11 +192,17 @@ const ComplaintFormPage = () => {
               value={form.content}
               onChange={handleChange}
               required
-              className="w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white resize-none"
+              className={`w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 text-sm bg-white resize-none ${
+                errors.content ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-blue-500"
+              }`}
               placeholder="Ceritakan masalahmu di sini..."
             ></textarea>
+            {errors.content && (
+              <p className="text-red-600 text-sm mt-1">{errors.content}</p>
+            )}
           </div>
 
+          {/* File */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Lampiran (opsional)
@@ -153,9 +212,16 @@ const ComplaintFormPage = () => {
               name="file"
               accept=".jpg,.jpeg,.png,.pdf"
               onChange={handleFileChange}
-              className="w-full px-4 py-2 rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white"
+              className={`w-full px-4 py-2 rounded-xl border focus:outline-none focus:ring-2 text-sm bg-white ${
+                errors.file ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-blue-500"
+              }`}
             />
+            {errors.file && (
+              <p className="text-red-600 text-sm mt-1">{errors.file}</p>
+            )}
           </div>
+
+          {/* Image Preview */}
           {imagePreview && (
             <div className="mt-4">
               <p className="text-sm text-gray-500 mb-2">Pratinjau Gambar:</p>

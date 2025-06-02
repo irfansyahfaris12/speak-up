@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 
 
 
-const PengaduanList = ({report}) => {
+const PengaduanList = ({report = []}) => {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
